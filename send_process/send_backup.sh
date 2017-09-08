@@ -135,7 +135,7 @@ do
 	# Remove the ending of each file name, to keep only the id of the app
 	appid="${archive//_fallback_backup.*/}"
 	# Ignore the system backup
-	if [ "$appid" != system ]
+	if [ "$appid" != system ] || [ "$appid" != app_list.cpt ] || [ "$appid" != config.conf.cpt ]
 	then
 		# Try to find the app in the app_list, with its point.
 		if ! grep --quiet "^\[\.\]\: $appid" app_list
@@ -147,6 +147,31 @@ do
 		fi
 	fi
 done <<< "$(ls -1 "$local_archive_dir")"
+
+#=================================================
+# COPY CONFIG AND LIST
+#=================================================
+
+simple_checksum () {
+	local file="$1"
+	# Compare the checksum
+	if ! md5sum --status --check checksum/${file}_checksum > /dev/null 2>&1
+	then
+		# If it's different, reset the checksum and copy then encrypt the file
+		md5sum --status $file > checksum/${file}_checksum 2> /dev/null
+		cp "$file" "$local_archive_dir/$file" 2>&1 | $logger
+		if [ $encrypt -eq 1 ]
+		then
+			main_message "> Encryption of $file"
+			# Remove the previous encrypted file
+			rm -f "$local_archive_dir/$file.cpt" 2>&1 | $logger
+			sudo ccrypt --encrypt --keyfile "$pass_file" "$local_archive_dir/$file" 2>&1 | $logger
+		fi
+	fi
+}
+
+simple_checksum config.conf
+simple_checksum app_list
 
 #=================================================
 # SEND ARCHIVES ON THE FALLBACK SERVER
