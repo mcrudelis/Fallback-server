@@ -4,10 +4,11 @@
 # DISCLAIMER
 #=================================================
 
-echo "This script will deploy your backups on this server and make it your
-fallback server.
-When you're done and you would cease to use this other server. Use the script
-'close_fallback.sh'.
+echo "Be carreful with this script !
+It will change your system by restoring the backup from your fallback server.
+Before any restoring, a backup will be make for each part of your server.
+Then, each backup from your fallback server will be restored to update the data
+of your server.
 "
 
 read -p "Press a key to continue."
@@ -25,13 +26,22 @@ script_dir="$(dirname $(realpath $0))"
 source "$script_dir/../commons/functions.sh"
 
 #=================================================
+# READ CONFIGURATION FROM CONFIG.CONF
+#=================================================
+
+config_file="$script_dir/config.conf"
+get_infos_from_config
+
+#=================================================
 # SET VARIABLES
 #=================================================
 
-# Usually is the home directory of the ssh user, then backup
-local_archive_dir="/home/USER/backup"
+# Usually is updated_backup
+distant_archive_dir="updated_backup"
 
+local_archive_dir="$main_storage_dir/backup_from_fallback"
 decrypted_dir="$local_archive_dir/../decrypted"
+
 pass_file="$decrypted_dir/pass"
 
 #=================================================
@@ -74,29 +84,46 @@ restore_a_backup() {
 }
 
 #=================================================
-# DECRYPT CONFIG AND LIST
+# DOWNLOAD ARCHIVES FROM THE FALLBACK SERVER
 #=================================================
 
-backup_decrypt config.conf
-sudo cp "$decrypted_dir/config.conf" "$script_dir/config.conf"
+main_message_log "> Download the archives from the server $ssh_host"
+sudo rsync --archive --verbose --human-readable --delete \
+	--rsh="ssh $ssh_options" $ssh_user@$ssh_host:$distant_archive_dir "$local_archive_dir"
+
+#=================================================
+# DECRYPT LIST
+#=================================================
+
 backup_decrypt app_list
 sudo cp "$decrypted_dir/app_list" "$script_dir/app_list"
 
 #=================================================
-# MAKE A GLOBAL BACKUP
+# SYSTEM
 #=================================================
 
-main_message "> Create a global backup before deploying the fallback"
-$ynh_backup_delete backup_before_deploy_fallback 2> /dev/null
-backup_hooks="conf_ldap conf_ynh_mysql conf_ssowat conf_ynh_certs data_mail conf_xmpp conf_nginx conf_cron conf_ynh_currenthost"
-$ynh_backup --system $backup_hooks --name backup_before_deploy_fallback
+read -p "Would you restore the system from the fallback backup ? (Y/n): " answer
+# Transform all the charactere in lowercase
+answer=${answer,,}
+if [ "$answer" != "No" ] && [ "$answer" != "N" ]
+then
+	#=================================================
+	# MAKE A BACKUP OF THE SYSTEM
+	#=================================================
 
-#=================================================
-# RESTORE THE SYSTEM FROM THE MAIN SERVER BACKUP
-#=================================================
+	main_message "> Create a backup of the system before restoring"
+	backup_name="system$backup_extension"
+	$ynh_backup_delete $backup_name 2> /dev/null
+	backup_hooks="conf_ldap conf_ynh_mysql conf_ssowat conf_ynh_certs data_mail conf_xmpp conf_nginx conf_cron conf_ynh_currenthost"
+	$ynh_backup --ignore-apps --system $backup_hooks --name $backup_name
 
-main_message "> Restore the system from the main server's backup"
-restore_a_backup system_fallback_backup
+	#=================================================
+	# RESTORE THE SYSTEM FROM THE MAIN SERVER BACKUP
+	#=================================================
+
+	main_message "> Restore the system from the main server's backup"
+	restore_a_backup system_fallback_backup
+fi
 
 #=================================================
 # RESTORE APPS FROM THE MAIN SERVER BACKUP
@@ -106,14 +133,22 @@ while read app
 do
 	appid="${app//\[.\]\: /}"
 	backup_name="$appid$backup_extension"
-	main_message "> Restore the app $appid"
-	# If an app exist with the same id
-	if sudo yunohost app list --installed --filter $appid | grep -q id:
+	read -p "Would you restore $appid from the fallback backup ? (Y/n): " answer
+	# Transform all the charactere in lowercase
+	answer=${answer,,}
+	if [ "$answer" != "No" ] && [ "$answer" != "N" ]
 	then
-		# Remove this app
-		sudo yunohost app remove $appid
+		main_message "> Restore the app $appid"
+		# If an app exist with the same id
+		if sudo yunohost app list --installed --filter $appid | grep -q id:
+		then
+			# Make a backup before
+			ynh_backup --ignore-system --name $backup_name --apps $appid
+			# Remove this app
+			sudo yunohost app remove $appid
+		fi
+		restore_a_backup $backup_name
 	fi
-	restore_a_backup $backup_name
 done <<< "$(grep "^\[\.\]\:" "$script_dir/app_list")"
 
 #=================================================
@@ -122,11 +157,3 @@ done <<< "$(grep "^\[\.\]\:" "$script_dir/app_list")"
 
 main_message "> Remove the temporary files"
 rm -r "$decrypted_dir"
-sudo rm "$pass_file"
-
-#=================================================
-# DISCLAIMER
-#=================================================
-
-echo "To be able to use this server in replacement of your main server, you
-should check your dns and be sure it points on this server."

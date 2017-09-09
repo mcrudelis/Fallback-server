@@ -1,54 +1,51 @@
 #!/bin/bash
 
 #=================================================
+# GET THE SCRIPT'S DIRECTORY
+#=================================================
+
+script_dir="$(dirname $(realpath $0))"
+
+#=================================================
+# IMPORT FUNCTIONS
+#=================================================
+
+source "$script_dir/../commons/functions.sh"
+
+#=================================================
 # READ CONFIGURATION FROM CONFIG.CONF
 #=================================================
-# Fallback credential
-ssh_user=$(grep ssh_user= config.conf | cut -d'=' -f2)
-ssh_host=$(grep ssh_host= config.conf | cut -d'=' -f2)
-ssh_key="$(grep ssh_key= config.conf | cut -d'=' -f2)"
-ssh_port=$(grep ssh_port= config.conf | cut -d'=' -f2)
-# ssh_port has a default value at 22
-ssh_port=${ssh_port:-22}
-ssh_options="-p $ssh_port -i \"$ssh_key\" $(grep ssh_options= config.conf | cut -d'=' -f2)"
 
-# Encryption
-encrypt=$(grep encrypt= config.conf | cut -d'=' -f2)
-# encrypt has a default value at 0
-encrypt=${encrypt:-0}
-pass_file="$(grep pass_file= config.conf | cut -d'=' -f2)"
+config_file="$script_dir/config.conf"
+get_infos_from_config
 
 #=================================================
 # SET VARIABLES
 #=================================================
 
-temp_backup_dir="temp_fallback_backup"
-generic_backup="sudo yunohost backup create --output-directory $temp_backup_dir"
-local_archive_dir=backup
-logfile=send_backup.log
+main_archive_dir="$main_storage_dir/backup"
+temp_backup_dir="$main_storage_dir/temp_fallback_backup"
+checksum_dir="$script_dir/checksum"
+logfile="$script_dir/send_backup.log"
+
 logger="tee --append $logfile"
 
 #=================================================
 # INITIALISE THE LOG FILE
 #=================================================
 
-echo -e "\n\n" >> $logfile
-date >> $logfile
+echo -e "\n\n" >> "$logfile"
+date >> "$logfile"
 
 #=================================================
 # DECLARE FUNCTIONS
 #=================================================
 
-main_message () {
-	echo -e "\e[1m$1\e[0m"
-	echo "$1" >> $logfile
-}
-
 # Make a temporary backup and compare the checksum with the previous backup.
 backup_checksum () {
 	local backup_cmd="$1"
 	# Make a temporary backup
-	main_message "> Make a temporary backup for $backup_name"
+	main_message_log "> Make a temporary backup for $backup_name"
 	$backup_cmd --no-compress > /dev/null 2>&1
 	# Remove the info.json file
 	sudo rm "$temp_backup_dir/info.json" 2>&1 | $logger
@@ -56,16 +53,16 @@ backup_checksum () {
 	# That give us a checksum for the whole directory
 	new_checksum=$(sudo find "$temp_backup_dir" -type f -exec md5sum {} \; | md5sum | cut -d' ' -f1)
 	# Get the previous checksum
-	old_checksum=$(cat "checksum/$backup_name" 2> /dev/null)
+	old_checksum=$(cat "$checksum_dir/$backup_name" 2> /dev/null)
 	sudo rm -r "$temp_backup_dir" 2>&1 | $logger
 	# And compare the 2 checksum
 	if [ "$new_checksum" == "$old_checksum" ]
 	then
-		main_message ">> This backup is the same than the previous one"
+		main_message_log ">> This backup is the same than the previous one"
 		return 1
 	else
-		main_message ">> This backup is different than the previous one"
-		echo $new_checksum > "checksum/$backup_name"
+		main_message_log ">> This backup is different than the previous one"
+		echo $new_checksum > "$checksum_dir/$backup_name"
 		return 0
 	fi
 }
@@ -74,10 +71,8 @@ backup_checksum () {
 backup_encrypt() {
 	if [ $encrypt -eq 1 ]
 	then
-		main_message ">>>> Encryption of $backup_name"
-		# Remove the previous encrypted backup
-		rm -f "$local_archive_dir/$backup_name.tar.gz.cpt" 2>&1 | $logger
-		sudo ccrypt --encrypt --keyfile "$pass_file" "$local_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
+		main_message_log ">>>> Encryption of $backup_name"
+		sudo encrypt_a_file "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
 	fi
 }
 
@@ -85,17 +80,17 @@ backup_encrypt() {
 # MAKE A BACKUP OF THE SYSTEM
 #=================================================
 
-backup_name="system_fallback_backup"
+backup_name="system$backup_extension"
 backup_hooks="conf_ldap conf_ynh_mysql conf_ssowat conf_ynh_certs data_mail conf_xmpp conf_nginx conf_cron conf_ynh_currenthost"
-backup_command="$generic_backup --ignore-apps --system $backup_hooks --name $backup_name"
+backup_command="$ynh_backup --output-directory $temp_backup_dir --ignore-apps --system $backup_hooks --name $backup_name"
 # If the backup is different than the previous one
 if backup_checksum "$backup_command"
 then
-	main_message ">>> Make a real backup for $backup_name"
+	main_message_log ">>> Make a real backup for $backup_name"
 	# Make a real backup
 	$backup_command 2>&1 | $logger
 	# Move the backup in the dedicated directory
-	sudo mv "$temp_backup_dir/$backup_name.tar.gz" "$local_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
+	sudo mv "$temp_backup_dir/$backup_name.tar.gz" "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
 	# Then remove the link in yunohost directory.
 	sudo yunohost backup delete "$backup_name" 2>&1 | $logger
 	# Encrypt the backup
@@ -109,22 +104,22 @@ fi
 while read app
 do
 	appid="${app//\[.\]\: /}"
-	backup_name="${appid}_fallback_backup"
-	backup_command="$generic_backup --ignore-system --name $backup_name --apps"
+	backup_name="$appid$backup_extension"
+	backup_command="$ynh_backup --output-directory $temp_backup_dir --ignore-system --name $backup_name --apps"
 	# If the backup is different than the previous one
 	if backup_checksum "$backup_command $appid"
 	then
-		main_message ">>> Make a real backup for $backup_name"
+		main_message_log ">>> Make a real backup for $backup_name"
 		# Make a real backup
 		$backup_command $appid 2>&1 | $logger
 		# Move the backup in the dedicated directory
-		sudo mv "$temp_backup_dir/$backup_name.tar.gz" "$local_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
+		sudo mv "$temp_backup_dir/$backup_name.tar.gz" "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
 		# Then remove the link in yunohost directory.
 		sudo yunohost backup delete "$backup_name" 2>&1 | $logger
 		# Encrypt the backup
 		backup_encrypt
 	fi
-done <<< "$(grep "^\[\.\]\:" app_list)"
+done <<< "$(grep "^\[\.\]\:" "$script_dir/app_list")"
 
 #=================================================
 # REMOVE OLD APPS BACKUPS
@@ -133,20 +128,20 @@ done <<< "$(grep "^\[\.\]\:" app_list)"
 while read archive
 do
 	# Remove the ending of each file name, to keep only the id of the app
-	appid="${archive//_fallback_backup.*/}"
+	appid="$(basename "${archive//$backup_extension.*/}")"
 	# Ignore the system backup
 	if [ "$appid" != system ] || [ "$appid" != app_list.cpt ] || [ "$appid" != config.conf.cpt ]
 	then
 		# Try to find the app in the app_list, with its point.
-		if ! grep --quiet "^\[\.\]\: $appid" app_list
+		if ! grep --quiet "^\[\.\]\: $appid" "$script_dir/app_list"
 		then
-			main_message "> Remove the old backup $archive"
+			main_message_log "> Remove the old backup $archive"
 			# If this app is not is the list of app to backup, remove it
-			rm "$local_archive_dir/$archive" 2>&1 | $logger
-			rm "checksum/${appid}_fallback_backup" 2>&1 | $logger
+			rm "$main_archive_dir/$archive" 2>&1 | $logger
+			rm "$checksum_dir/$appid$backup_extension" 2>&1 | $logger
 		fi
 	fi
-done <<< "$(ls -1 "$local_archive_dir")"
+done <<< "$(ls -1 "$main_archive_dir")"
 
 #=================================================
 # COPY CONFIG AND LIST
@@ -155,28 +150,26 @@ done <<< "$(ls -1 "$local_archive_dir")"
 simple_checksum () {
 	local file="$1"
 	# Compare the checksum
-	if ! md5sum --status --check checksum/${file}_checksum > /dev/null 2>&1
+	if ! md5sum --status --check "$checksum_dir/${file}_checksum" > /dev/null 2>&1
 	then
 		# If it's different, reset the checksum and copy then encrypt the file
-		md5sum --status $file > checksum/${file}_checksum 2> /dev/null
-		cp "$file" "$local_archive_dir/$file" 2>&1 | $logger
+		md5sum --status $file > "$checksum_dir/${file}_checksum" 2> /dev/null
+		cp "$file" "$main_archive_dir/$file" 2>&1 | $logger
 		if [ $encrypt -eq 1 ]
 		then
-			main_message "> Encryption of $file"
-			# Remove the previous encrypted file
-			rm -f "$local_archive_dir/$file.cpt" 2>&1 | $logger
-			sudo ccrypt --encrypt --keyfile "$pass_file" "$local_archive_dir/$file" 2>&1 | $logger
+			main_message_log "> Encryption of $file"
+			sudo encrypt_a_file "$main_archive_dir/$file" 2>&1 | $logger
 		fi
 	fi
 }
 
-simple_checksum config.conf
-simple_checksum app_list
+simple_checksum "$script_dir/config.conf"
+simple_checksum "$script_dir/app_list"
 
 #=================================================
 # SEND ARCHIVES ON THE FALLBACK SERVER
 #=================================================
 
-main_message "> Send the archives on the server $ssh_host"
-sudo rsync --archive --verbose --human-readable --delete "$local_archive_dir" \
+main_message_log "> Send the archives on the server $ssh_host"
+sudo rsync --archive --verbose --human-readable --delete "$main_archive_dir" \
 	--rsh="ssh $ssh_options" $ssh_user@$ssh_host: 2>&1 | $logger

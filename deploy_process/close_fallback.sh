@@ -1,38 +1,55 @@
 #!/bin/bash
 
 #=================================================
+# DISCLAIMER
+#=================================================
+
+echo "Use this script when you've finished to use this fallback server.
+The system and the apps will be backuped and the server will be restore in the
+state it was before you use 'deploy_fallback.sh'.
+To update your main server with this data, use the script
+'update_from_fallback.sh' and your main server.
+"
+
+read -p "Press a key to continue."
+
+#=================================================
+# GET THE SCRIPT'S DIRECTORY
+#=================================================
+
+script_dir="$(dirname $(realpath $0))"
+
+#=================================================
+# IMPORT FUNCTIONS
+#=================================================
+
+source "$script_dir/../commons/functions.sh"
+
+#=================================================
 # READ CONFIGURATION FROM CONFIG.CONF
 #=================================================
-# Encryption
-encrypt=$(grep encrypt= config.conf | cut -d'=' -f2)
-# encrypt has a default value at 0
-encrypt=${encrypt:-0}
+
+config_file="$script_dir/config.conf"
+get_infos_from_config
 
 #=================================================
 # SET VARIABLES
 #=================================================
 
-generic_backup="sudo yunohost backup create"
-local_archive_dir=new_backup
+# Usually is the home directory of the ssh user, then updated_backup
+local_archive_dir="/home/USER/updated_backup"
 mkdir -p "$local_archive_dir"
-pass_file=cred
 
 #=================================================
 # DECLARE FUNCTIONS
 #=================================================
-
-main_message () {
-	echo -e "\e[1m$1\e[0m"
-}
 
 # Encrypt the backup, if the encryption is set.
 backup_encrypt() {
 	if [ $encrypt -eq 1 ]
 	then
 		main_message ">>>> Encryption of $backup_name"
-		# Remove the previous encrypted backup
-		rm -f "$local_archive_dir/$backup_name.tar.gz.cpt"
-		sudo ccrypt --encrypt --keyfile "$pass_file" "$local_archive_dir/$backup_name.tar.gz"
+		sudo encrypt_a_file "$local_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
 	fi
 }
 
@@ -40,23 +57,16 @@ backup_encrypt() {
 # DEFINE A ENCRYPTION KEY
 #=================================================
 
-read -p ">>> Please enter a encryption key: " -s ccrypt_mdp
-# Store the password in pass_file
-echo $ccrypt_mdp > "$pass_file"
-# Clear the variable
-unset ccrypt_mdp
-echo -e "\n"
-# And securise the file
-sudo chmod 400 $pass_file
+pass_file="$script_dir/pass"
+define_encryption_key
 
 #=================================================
 # MAKE A BACKUP OF THE SYSTEM
 #=================================================
 
-backup_name="system_new_fallback_backup"
+backup_name="system$backup_extension"
 backup_hooks="conf_ldap conf_ynh_mysql conf_ssowat conf_ynh_certs data_mail conf_xmpp conf_nginx conf_cron conf_ynh_currenthost"
-backup_command="$generic_backup --ignore-apps --system $backup_hooks --name $backup_name"
-# If the backup is different than the previous one
+backup_command="$ynh_backup --output-directory $temp_backup_dir --ignore-apps --system $backup_hooks --name $backup_name"
 
 main_message ">>> Make a backup for $backup_name"
 # Make a backup
@@ -75,7 +85,7 @@ backup_encrypt
 while read app
 do
 	appid="${app//\[.\]\: /}"
-	backup_name="${appid}_new_fallback_backup"
+	backup_name="$appid$backup_extension"
 	backup_command="$generic_backup --ignore-system --name $backup_name --apps"
 	main_message ">>> Make a backup for $backup_name"
 	# Make a backup
@@ -88,21 +98,21 @@ do
 	backup_encrypt
 	main_message ">>> Remove the app $appid"
 	sudo yunohost app remove $appid
-done <<< "$(grep "^\[\.\]\:" app_list)"
+done <<< "$(grep "^\[\.\]\:" "$script_dir/app_list")"
 
 #=================================================
 # MOVE LIST
 #=================================================
 
-mv app_list "$local_archive_dir/app_list"
-ccrypt --encrypt --keyfile "$pass_file" "$local_archive_dir/app_list"
+mv "$script_dir/app_list" "$local_archive_dir/app_list"
+encrypt_a_file "$local_archive_dir/app_list"
 
 #=================================================
 # CLEAN THE FILES
 #=================================================
 
 main_message "> Remove the temporary files"
-rm config.conf
+rm "$script_dir/config.conf"
 sudo rm "$pass_file"
 
 #=================================================
@@ -111,3 +121,10 @@ sudo rm "$pass_file"
 
 main_message "> Restore the global backup"
 sudo yunohost backup restore --force backup_before_deploy_fallback
+
+#=================================================
+# DISCLAIMER
+#=================================================
+
+echo "Now that you're finished to use this fallback server, you should check
+your dns and be sure it points on your main server."
