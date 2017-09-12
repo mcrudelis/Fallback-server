@@ -4,10 +4,10 @@
 # DISCLAIMER
 #=================================================
 
-echo "This script will deploy your backups on this server and make it your
+echo -e "\e[1mThis script will deploy your backups on this server and make it your
 fallback server.
 When you're done and you would cease to use this other server. Use the script
-'close_fallback.sh'.
+'close_fallback.sh'.\e[0m
 "
 
 read -p "Press a key to continue."
@@ -96,7 +96,7 @@ $ynh_backup --system $backup_hooks --name backup_before_deploy_fallback
 #=================================================
 
 main_message "> Restore the system from the main server's backup"
-restore_a_backup system_fallback_backup
+restore_a_backup system$backup_extension
 
 #=================================================
 # RESTORE APPS FROM THE MAIN SERVER BACKUP
@@ -121,12 +121,11 @@ done <<< "$(grep "^\[\.\]\:" "$script_dir/app_list")"
 #=================================================
 
 main_message "> Remove the temporary files"
-rm -r "$decrypted_dir"
-sudo rm "$pass_file"
+sudo rm -r "$decrypted_dir"
 
 #=================================================
 # DISCLAIMER
 #=================================================
 
-echo "To be able to use this server in replacement of your main server, you
-should check your dns and be sure it points on this server."
+echo -e "\n\e[1mTo be able to use this server in replacement of your main server, you
+should check your dns and be sure it points on this server.\e[0m"

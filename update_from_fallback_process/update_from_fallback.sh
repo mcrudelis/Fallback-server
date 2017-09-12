@@ -4,11 +4,11 @@
 # DISCLAIMER
 #=================================================
 
-echo "Be carreful with this script !
+echo -e "\e[1mBe carreful with this script !
 It will change your system by restoring the backup from your fallback server.
 Before any restoring, a backup will be make for each part of your server.
 Then, each backup from your fallback server will be restored to update the data
-of your server.
+of your server.\e[0m
 "
 
 read -p "Press a key to continue."
@@ -29,7 +29,7 @@ source "$script_dir/../commons/functions.sh"
 # READ CONFIGURATION FROM CONFIG.CONF
 #=================================================
 
-config_file="$script_dir/config.conf"
+config_file="$script_dir/../send_process/config.conf"
 get_infos_from_config
 
 #=================================================
@@ -52,8 +52,8 @@ pass_file="$decrypted_dir/pass"
 backup_decrypt() {
 	# crypt_file take the name of the file, with or without .cpt
 	local crypt_file="$(cd "$local_archive_dir" && ls -1 "$1"*)"
-	mkdir -p "$decrypted_dir"
-	cp "$local_archive_dir/$crypt_file" "$decrypted_dir/$crypt_file"
+	sudo mkdir -p "$decrypted_dir"
+	sudo cp "$local_archive_dir/$crypt_file" "$decrypted_dir/$crypt_file"
 	# If the file has .cpt as extension, it's a crypted file
 	if [ "${crypt_file##*.}" == cpt ]
 	then
@@ -87,9 +87,9 @@ restore_a_backup() {
 # DOWNLOAD ARCHIVES FROM THE FALLBACK SERVER
 #=================================================
 
-main_message_log "> Download the archives from the server $ssh_host"
+main_message "> Download the archives from the server $ssh_host"
 sudo rsync --archive --verbose --human-readable --delete \
-	--rsh="ssh $ssh_options" $ssh_user@$ssh_host:$distant_archive_dir "$local_archive_dir"
+	--rsh="ssh $ssh_options" $ssh_user@$ssh_host:$distant_archive_dir/ "$local_archive_dir/"
 
 #=================================================
 # DECRYPT LIST
@@ -102,7 +102,8 @@ sudo cp "$decrypted_dir/app_list" "$script_dir/app_list"
 # SYSTEM
 #=================================================
 
-read -p "Would you restore the system from the fallback backup ? (Y/n): " answer
+echo -en "\n\e[33m\e[1mWould you restore the system from the fallback backup ? (Y/n):\e[0m "
+read answer
 # Transform all the charactere in lowercase
 answer=${answer,,}
 if [ "$answer" != "No" ] && [ "$answer" != "N" ]
@@ -112,7 +113,7 @@ then
 	#=================================================
 
 	main_message "> Create a backup of the system before restoring"
-	backup_name="system$backup_extension"
+	backup_name="system_pre_flbck_restore"
 	$ynh_backup_delete $backup_name 2> /dev/null
 	backup_hooks="conf_ldap conf_ynh_mysql conf_ssowat conf_ynh_certs data_mail conf_xmpp conf_nginx conf_cron conf_ynh_currenthost"
 	$ynh_backup --ignore-apps --system $backup_hooks --name $backup_name
@@ -122,18 +123,19 @@ then
 	#=================================================
 
 	main_message "> Restore the system from the main server's backup"
-	restore_a_backup system_fallback_backup
+	restore_a_backup system$backup_extension
 fi
 
 #=================================================
 # RESTORE APPS FROM THE MAIN SERVER BACKUP
 #=================================================
 
-while read app
+while read <&3 app
 do
 	appid="${app//\[.\]\: /}"
 	backup_name="$appid$backup_extension"
-	read -p "Would you restore $appid from the fallback backup ? (Y/n): " answer
+	echo -en "\n\e[33m\e[1mWould you restore $appid from the fallback backup ? (Y/n):\e[0m "
+	read answer
 	# Transform all the charactere in lowercase
 	answer=${answer,,}
 	if [ "$answer" != "No" ] && [ "$answer" != "N" ]
@@ -142,18 +144,19 @@ do
 		# If an app exist with the same id
 		if sudo yunohost app list --installed --filter $appid | grep -q id:
 		then
+			$ynh_backup_delete ${appid}_pre_flbck_restore 2> /dev/null
 			# Make a backup before
-			ynh_backup --ignore-system --name $backup_name --apps $appid
+			$ynh_backup --ignore-system --name ${appid}_pre_flbck_restore --apps $appid
 			# Remove this app
 			sudo yunohost app remove $appid
 		fi
 		restore_a_backup $backup_name
 	fi
-done <<< "$(grep "^\[\.\]\:" "$script_dir/app_list")"
+done 3<<< "$(grep "^\[\.\]\:" "$script_dir/app_list")"
 
 #=================================================
 # CLEAN THE FILES
 #=================================================
 
 main_message "> Remove the temporary files"
-rm -r "$decrypted_dir"
+sudo rm -r "$decrypted_dir"

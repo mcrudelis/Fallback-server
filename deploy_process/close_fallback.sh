@@ -4,11 +4,11 @@
 # DISCLAIMER
 #=================================================
 
-echo "Use this script when you've finished to use this fallback server.
+echo -e "\e[1mUse this script when you've finished to use this fallback server.
 The system and the apps will be backuped and the server will be restore in the
 state it was before you use 'deploy_fallback.sh'.
 To update your main server with this data, use the script
-'update_from_fallback.sh' and your main server.
+'update_from_fallback.sh' and your main server.\e[0m
 "
 
 read -p "Press a key to continue."
@@ -39,6 +39,14 @@ get_infos_from_config
 # Usually is the home directory of the ssh user, then updated_backup
 local_archive_dir="/home/USER/updated_backup"
 mkdir -p "$local_archive_dir"
+temp_backup_dir="$local_archive_dir/../temp_fallback_backup"
+
+#=================================================
+# DEFINE A ENCRYPTION KEY
+#=================================================
+
+pass_file="$local_archive_dir/pass"
+define_encryption_key
 
 #=================================================
 # DECLARE FUNCTIONS
@@ -49,16 +57,9 @@ backup_encrypt() {
 	if [ $encrypt -eq 1 ]
 	then
 		main_message ">>>> Encryption of $backup_name"
-		sudo encrypt_a_file "$local_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
+		encrypt_a_file "$local_archive_dir/$backup_name.tar.gz"
 	fi
 }
-
-#=================================================
-# DEFINE A ENCRYPTION KEY
-#=================================================
-
-pass_file="$script_dir/pass"
-define_encryption_key
 
 #=================================================
 # MAKE A BACKUP OF THE SYSTEM
@@ -66,7 +67,7 @@ define_encryption_key
 
 backup_name="system$backup_extension"
 backup_hooks="conf_ldap conf_ynh_mysql conf_ssowat conf_ynh_certs data_mail conf_xmpp conf_nginx conf_cron conf_ynh_currenthost"
-backup_command="$ynh_backup --output-directory $temp_backup_dir --ignore-apps --system $backup_hooks --name $backup_name"
+backup_command="$ynh_backup --ignore-apps --system $backup_hooks --name $backup_name"
 
 main_message ">>> Make a backup for $backup_name"
 # Make a backup
@@ -86,7 +87,7 @@ while read app
 do
 	appid="${app//\[.\]\: /}"
 	backup_name="$appid$backup_extension"
-	backup_command="$generic_backup --ignore-system --name $backup_name --apps"
+	backup_command="$ynh_backup --ignore-system --name $backup_name --apps"
 	main_message ">>> Make a backup for $backup_name"
 	# Make a backup
 	$backup_command $appid
@@ -104,7 +105,7 @@ done <<< "$(grep "^\[\.\]\:" "$script_dir/app_list")"
 # MOVE LIST
 #=================================================
 
-mv "$script_dir/app_list" "$local_archive_dir/app_list"
+sudo mv "$script_dir/app_list" "$local_archive_dir/app_list"
 encrypt_a_file "$local_archive_dir/app_list"
 
 #=================================================
@@ -112,8 +113,19 @@ encrypt_a_file "$local_archive_dir/app_list"
 #=================================================
 
 main_message "> Remove the temporary files"
-rm "$script_dir/config.conf"
+sudo rm "$script_dir/config.conf"
 sudo rm "$pass_file"
+
+#=================================================
+# CLEAN THE SYSTEM
+#=================================================
+
+# Clean the system to remove old config files.
+main_message "> Clean the system"
+
+sudo rm -r /etc/nginx/conf.d/*
+sudo rm -r /etc/metronome/conf.d/*
+sudo rm -r /var/mail/*
 
 #=================================================
 # RESTORE THE GLOBAL BACKUP
@@ -126,5 +138,5 @@ sudo yunohost backup restore --force backup_before_deploy_fallback
 # DISCLAIMER
 #=================================================
 
-echo "Now that you're finished to use this fallback server, you should check
-your dns and be sure it points on your main server."
+echo -e	 "\n\e[1mNow that you're finished to use this fallback server, you should check
+your dns and be sure it points on your main server.\e[0m"

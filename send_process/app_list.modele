@@ -1,4 +1,4 @@
-#000# ...
+#000# For each app you want to backup, precede by [.]
 []: app1
 [.]: app2
 [.]: app3

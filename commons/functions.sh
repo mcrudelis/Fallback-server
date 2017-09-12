@@ -21,6 +21,9 @@ get_infos_from_config () {
 	# encrypt has a default value at 0
 	encrypt=${encrypt:-0}
 	pass_file="$(grep pass_file= "$config_file" | cut -d'=' -f2)"
+
+	# Main backup directory
+	main_storage_dir=$(grep main_storage_dir= "$config_file" | cut -d'=' -f2)
 }
 
 main_message () {
@@ -36,12 +39,12 @@ encrypt_a_file () {
 	local file_to_encrypt="$1"
 	# Remove the previous encrypted file
 	rm -f "$file_to_encrypt.cpt"
-	ccrypt --encrypt --keyfile "$pass_file" "$file_to_encrypt"
+	sudo ccrypt --encrypt --keyfile "$pass_file" "$file_to_encrypt"
 }
 
 decrypt_a_file () {
 	local file_to_decrypt="$1"
-	ccrypt --decrypt --keyfile "$pass_file" "$file_to_decrypt"
+	sudo ccrypt --decrypt --keyfile "$pass_file" "$file_to_decrypt"
 }
 
 define_encryption_key () {

@@ -46,15 +46,15 @@ backup_checksum () {
 	local backup_cmd="$1"
 	# Make a temporary backup
 	main_message_log "> Make a temporary backup for $backup_name"
-	$backup_cmd --no-compress > /dev/null 2>&1
+	rm -rf "$temp_backup_dir" 2>&1 | $logger
+	$backup_cmd --no-compress > /dev/null
 	# Remove the info.json file
-	sudo rm "$temp_backup_dir/info.json" 2>&1 | $logger
+	rm "$temp_backup_dir/info.json" 2>&1 | $logger
 	# Make a checksum of each file in the directory, then a checksum of all these cheksums.
 	# That give us a checksum for the whole directory
-	new_checksum=$(sudo find "$temp_backup_dir" -type f -exec md5sum {} \; | md5sum | cut -d' ' -f1)
+	new_checksum=$(find "$temp_backup_dir" -type f -exec md5sum {} \; | md5sum | cut -d' ' -f1)
 	# Get the previous checksum
 	old_checksum=$(cat "$checksum_dir/$backup_name" 2> /dev/null)
-	sudo rm -r "$temp_backup_dir" 2>&1 | $logger
 	# And compare the 2 checksum
 	if [ "$new_checksum" == "$old_checksum" ]
 	then
@@ -72,7 +72,7 @@ backup_encrypt() {
 	if [ $encrypt -eq 1 ]
 	then
 		main_message_log ">>>> Encryption of $backup_name"
-		sudo encrypt_a_file "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
+		encrypt_a_file "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
 	fi
 }
 
@@ -90,9 +90,9 @@ then
 	# Make a real backup
 	$backup_command 2>&1 | $logger
 	# Move the backup in the dedicated directory
-	sudo mv "$temp_backup_dir/$backup_name.tar.gz" "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
+	mv "$temp_backup_dir/$backup_name.tar.gz" "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
 	# Then remove the link in yunohost directory.
-	sudo yunohost backup delete "$backup_name" 2>&1 | $logger
+	yunohost backup delete "$backup_name" 2>&1 | $logger
 	# Encrypt the backup
 	backup_encrypt
 fi
@@ -103,21 +103,24 @@ fi
 
 while read app
 do
-	appid="${app//\[.\]\: /}"
-	backup_name="$appid$backup_extension"
-	backup_command="$ynh_backup --output-directory $temp_backup_dir --ignore-system --name $backup_name --apps"
-	# If the backup is different than the previous one
-	if backup_checksum "$backup_command $appid"
+	if [ -n "$app" ]
 	then
-		main_message_log ">>> Make a real backup for $backup_name"
-		# Make a real backup
-		$backup_command $appid 2>&1 | $logger
-		# Move the backup in the dedicated directory
-		sudo mv "$temp_backup_dir/$backup_name.tar.gz" "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
-		# Then remove the link in yunohost directory.
-		sudo yunohost backup delete "$backup_name" 2>&1 | $logger
-		# Encrypt the backup
-		backup_encrypt
+		appid="${app//\[.\]\: /}"
+		backup_name="$appid$backup_extension"
+		backup_command="$ynh_backup --output-directory $temp_backup_dir --ignore-system --name $backup_name --apps"
+		# If the backup is different than the previous one
+		if backup_checksum "$backup_command $appid"
+		then
+			main_message_log ">>> Make a real backup for $backup_name"
+			# Make a real backup
+			$backup_command $appid 2>&1 | $logger
+			# Move the backup in the dedicated directory
+			mv "$temp_backup_dir/$backup_name.tar.gz" "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
+			# Then remove the link in yunohost directory.
+			yunohost backup delete "$backup_name" 2>&1 | $logger
+			# Encrypt the backup
+			backup_encrypt
+		fi
 	fi
 done <<< "$(grep "^\[\.\]\:" "$script_dir/app_list")"
 
@@ -130,7 +133,7 @@ do
 	# Remove the ending of each file name, to keep only the id of the app
 	appid="$(basename "${archive//$backup_extension.*/}")"
 	# Ignore the system backup
-	if [ "$appid" != system ] || [ "$appid" != app_list.cpt ] || [ "$appid" != config.conf.cpt ]
+	if [ "$appid" != system ] && [ "$appid" != app_list.cpt ] && [ "$appid" != config.conf.cpt ]
 	then
 		# Try to find the app in the app_list, with its point.
 		if ! grep --quiet "^\[\.\]\: $appid" "$script_dir/app_list"
@@ -149,16 +152,17 @@ done <<< "$(ls -1 "$main_archive_dir")"
 
 simple_checksum () {
 	local file="$1"
+	local file_name="$(basename $1)"
 	# Compare the checksum
-	if ! md5sum --status --check "$checksum_dir/${file}_checksum" > /dev/null 2>&1
+	if ! md5sum --status --check "$checksum_dir/${file_name}_checksum" > /dev/null 2>&1
 	then
 		# If it's different, reset the checksum and copy then encrypt the file
-		md5sum --status $file > "$checksum_dir/${file}_checksum" 2> /dev/null
-		cp "$file" "$main_archive_dir/$file" 2>&1 | $logger
+		md5sum --status $file > "$checksum_dir/${file_name}_checksum" 2> /dev/null
+		cp "$file" "$main_archive_dir/$file_name" 2>&1 | $logger
 		if [ $encrypt -eq 1 ]
 		then
-			main_message_log "> Encryption of $file"
-			sudo encrypt_a_file "$main_archive_dir/$file" 2>&1 | $logger
+			main_message_log "> Encryption of $file_name"
+			encrypt_a_file "$main_archive_dir/$file_name" 2>&1 | $logger
 		fi
 	fi
 }
@@ -171,5 +175,5 @@ simple_checksum "$script_dir/app_list"
 #=================================================
 
 main_message_log "> Send the archives on the server $ssh_host"
-sudo rsync --archive --verbose --human-readable --delete "$main_archive_dir" \
+rsync --archive --verbose --human-readable --delete "$main_archive_dir" \
 	--rsh="ssh $ssh_options" $ssh_user@$ssh_host: 2>&1 | $logger
