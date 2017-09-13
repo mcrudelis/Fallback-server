@@ -38,7 +38,7 @@ main_message_log () {
 encrypt_a_file () {
 	local file_to_encrypt="$1"
 	# Remove the previous encrypted file
-	rm -f "$file_to_encrypt.cpt"
+	sudo rm -f "$file_to_encrypt.cpt"
 	sudo ccrypt --encrypt --keyfile "$pass_file" "$file_to_encrypt"
 }
 
@@ -48,9 +48,10 @@ decrypt_a_file () {
 }
 
 define_encryption_key () {
-	read -p ">>> Please enter a encryption key: " -s ccrypt_mdp
+	echo -en "\e[1m\e[33m>>> Please enter your encryption key:\e[0m "
+	read -s ccrypt_mdp
 	# Store the password in pass_file
-	echo $ccrypt_mdp > "$pass_file"
+	echo $ccrypt_mdp | sudo tee "$pass_file"
 	# Clear the variable
 	unset ccrypt_mdp
 	echo -e "\n"

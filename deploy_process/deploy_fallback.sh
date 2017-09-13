@@ -31,7 +31,7 @@ source "$script_dir/../commons/functions.sh"
 # Usually is the home directory of the ssh user, then backup
 local_archive_dir="/home/USER/backup"
 
-decrypted_dir="$local_archive_dir/../decrypted"
+decrypted_dir="$local_archive_dir/decrypted"
 pass_file="$decrypted_dir/pass"
 
 #=================================================
@@ -42,8 +42,8 @@ pass_file="$decrypted_dir/pass"
 backup_decrypt() {
 	# crypt_file take the name of the file, with or without .cpt
 	local crypt_file="$(cd "$local_archive_dir" && ls -1 "$1"*)"
-	mkdir -p "$decrypted_dir"
-	cp "$local_archive_dir/$crypt_file" "$decrypted_dir/$crypt_file"
+	sudo mkdir -p "$decrypted_dir"
+	sudo cp "$local_archive_dir/$crypt_file" "$decrypted_dir/$crypt_file"
 	# If the file has .cpt as extension, it's a crypted file
 	if [ "${crypt_file##*.}" == cpt ]
 	then
