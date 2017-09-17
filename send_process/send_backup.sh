@@ -177,5 +177,5 @@ simple_checksum "$script_dir/app_list"
 #=================================================
 
 main_message_log "> Send the archives on the server $ssh_host"
-rsync --archive --verbose --human-readable --delete "$main_archive_dir" \
-	--rsh="ssh $ssh_options" $ssh_user@$ssh_host: 2>&1 | $logger
+rsync --archive --verbose --human-readable --stats --itemize-changes --delete "$main_archive_dir" \
+	--rsh="ssh $ssh_options" $ssh_user@$ssh_host: | $logger >&2
