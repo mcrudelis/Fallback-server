@@ -19,6 +19,8 @@ source "$script_dir/../commons/functions.sh"
 config_file="$script_dir/config.conf"
 get_infos_from_config
 
+ssh_options="-p $ssh_port -i $ssh_key $ssh_options"
+
 #=================================================
 # SET VARIABLES
 #=================================================
