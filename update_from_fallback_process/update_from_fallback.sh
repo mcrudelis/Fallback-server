@@ -108,7 +108,7 @@ echo -en "\n\e[33m\e[1mWould you restore the system from the fallback backup ? (
 read answer
 # Transform all the charactere in lowercase
 answer=${answer,,}
-if [ "$answer" != "No" ] && [ "$answer" != "N" ]
+if [ "$answer" != "no" ] && [ "$answer" != "n" ]
 then
 	#=================================================
 	# MAKE A BACKUP OF THE SYSTEM
@@ -136,23 +136,27 @@ while read <&3 app
 do
 	appid="${app//\[.\]\: /}"
 	backup_name="$appid$backup_extension"
-	echo -en "\n\e[33m\e[1mWould you restore $appid from the fallback backup ? (Y/n):\e[0m "
-	read answer
-	# Transform all the charactere in lowercase
-	answer=${answer,,}
-	if [ "$answer" != "No" ] && [ "$answer" != "N" ]
+	# Ask only if there really a backup for this app
+	if ( cd "$local_archive_dir" && test -e $backup_name.* )
 	then
-		main_message "> Restore the app $appid"
-		# If an app exist with the same id
-		if sudo yunohost app list --installed --filter $appid | grep -q id:
+		echo -en "\n\e[33m\e[1mWould you restore $appid from the fallback backup ? (Y/n):\e[0m "
+		read answer
+		# Transform all the charactere in lowercase
+		answer=${answer,,}
+		if [ "$answer" != "no" ] && [ "$answer" != "n" ]
 		then
-			$ynh_backup_delete ${appid}_pre_flbck_restore 2> /dev/null
-			# Make a backup before
-			$ynh_backup --ignore-system --name ${appid}_pre_flbck_restore --apps $appid
-			# Remove this app
-			sudo yunohost app remove $appid
+			main_message "> Restore the app $appid"
+			# If an app exist with the same id
+			if sudo yunohost app list --installed --filter $appid | grep -q id:
+			then
+				$ynh_backup_delete ${appid}_pre_flbck_restore 2> /dev/null
+				# Make a backup before
+				$ynh_backup --ignore-system --name ${appid}_pre_flbck_restore --apps $appid
+				# Remove this app
+				sudo yunohost app remove $appid
+			fi
+			restore_a_backup $backup_name
 		fi
-		restore_a_backup $backup_name
 	fi
 done 3<<< "$(grep "^\[\.\]\:" "$script_dir/app_list")"
 

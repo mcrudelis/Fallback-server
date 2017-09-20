@@ -51,7 +51,7 @@ define_encryption_key () {
 	echo -en "\e[1m\e[33m>>> Please enter your encryption key:\e[0m "
 	read -s ccrypt_mdp
 	# Store the password in pass_file
-	echo $ccrypt_mdp | sudo tee "$pass_file"
+	echo $ccrypt_mdp | sudo tee "$pass_file" > /dev/null
 	# Clear the variable
 	unset ccrypt_mdp
 	echo -e "\n"
