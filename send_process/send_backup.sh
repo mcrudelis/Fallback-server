@@ -49,14 +49,19 @@ backup_checksum () {
 	# Make a temporary backup
 	main_message_log "> Make a temporary backup for $backup_name"
 	rm -rf "$temp_backup_dir" 2>&1 | $logger
-	$backup_cmd --no-compress > /dev/null
+	if ! $backup_cmd --no-compress > /dev/null
+	then
+		# If the backup fail, do not make a real backup
+		echo ">>> The temporary backup failed..."
+		return 1
+	fi
 	# Remove the info.json file
 	rm "$temp_backup_dir/info.json" 2>&1 | $logger
 	# Make a checksum of each file in the directory, then a checksum of all these cheksums.
 	# That give us a checksum for the whole directory
-	new_checksum=$(find "$temp_backup_dir" -type f -exec md5sum {} \; | md5sum | cut -d' ' -f1)
+	local new_checksum=$(find "$temp_backup_dir" -type f -exec md5sum {} \; | md5sum | cut -d' ' -f1)
 	# Get the previous checksum
-	old_checksum=$(cat "$checksum_dir/$backup_name" 2> /dev/null)
+	local old_checksum=$(cat "$checksum_dir/$backup_name" 2> /dev/null)
 	# And compare the 2 checksum
 	if [ "$new_checksum" == "$old_checksum" ]
 	then
