@@ -1,6 +1,12 @@
 #!/bin/bash
 
 #=================================================
+# GET THE SCRIPT'S DIRECTORY
+#=================================================
+
+script_dir="$(dirname $(realpath $0))"
+
+#=================================================
 # DETECT AUTO-MODE
 #=================================================
 
@@ -11,31 +17,25 @@ then
 fi
 
 #=================================================
+# IMPORT FUNCTIONS
+#=================================================
+
+source "$script_dir/../commons/functions.sh"
+
+#=================================================
 # DISCLAIMER
 #=================================================
 
-echo -e "\e[1mThis script will deploy your backups on this server and make it your
+main_message "This script will deploy your backups on this server and make it your
 fallback server.
 When you're done and you would cease to use this other server. Use the script
-'close_fallback.sh'.\e[0m
+'close_fallback.sh'.
 "
 
 if [ $auto_mode -eq 0 ]
 then
 	read -p "Press a key to continue."
 fi
-
-#=================================================
-# GET THE SCRIPT'S DIRECTORY
-#=================================================
-
-script_dir="$(dirname $(realpath $0))"
-
-#=================================================
-# IMPORT FUNCTIONS
-#=================================================
-
-source "$script_dir/../commons/functions.sh"
 
 #=================================================
 # SET VARIABLES
@@ -146,5 +146,5 @@ sudo rm -r "$decrypted_dir"
 # DISCLAIMER
 #=================================================
 
-echo -e "\n\e[1mTo be able to use this server in replacement of your main server, you
-should check your dns and be sure it points on this server.\e[0m"
+main_message "\nTo be able to use this server in replacement of your main server, you
+should check your dns and be sure it points on this server."

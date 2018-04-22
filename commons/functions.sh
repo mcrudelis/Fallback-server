@@ -6,6 +6,8 @@ ynh_backup_delete="sudo yunohost backup delete"
 
 backup_extension="_fallback_bck"
 
+auto_mode=${auto_mode:-0}
+
 get_infos_from_config () {
 	# Fallback credential
 	ssh_user=$(grep ssh_user= "$config_file" | cut -d'=' -f2)
@@ -24,6 +26,9 @@ get_infos_from_config () {
 
 	# Main backup directory
 	main_storage_dir=$(grep main_storage_dir= "$config_file" | cut -d'=' -f2)
+
+	# Alternative public IP for the main server.
+	overwrite_ip=$(grep overwrite_ip= "$config_file" | cut -d'=' -f2)
 }
 
 main_message () {
@@ -31,7 +36,7 @@ main_message () {
 	then
 		echo -e "\e[1m$1\e[0m"
 	else
-		echo "$1"
+		echo -e "$1"
 	fi
 }
 

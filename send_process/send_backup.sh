@@ -181,8 +181,16 @@ simple_checksum "$script_dir/app_list"
 # PRINT THE IP OF THIS SERVER
 #=================================================
 
-echo "$(curl -s http://www.monip.org/ | grep "IP : " | cut -d':' -f2 | cut -d' ' -f2| cut -d'<' -f1)" \
-	> "$main_archive_dir/ip_main_server"
+# If there's no alternative IP set in the config file.
+if [ -z "$overwrite_ip" ]
+then
+	# Find the public ip of this server.
+	echo "$(curl -s http://www.monip.org/ | grep "IP : " | cut -d':' -f2 | cut -d' ' -f2| cut -d'<' -f1)" \
+		> "$main_archive_dir/ip_main_server"
+else
+	# Or use the IP set in the config file
+	echo "$overwrite_ip" > "$main_archive_dir/ip_main_server"
+fi
 
 #=================================================
 # SEND ARCHIVES ON THE FALLBACK SERVER
