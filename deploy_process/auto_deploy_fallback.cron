@@ -1,0 +1,5 @@
+# Check the availability of the main server, to detect a failure.
+? ? * * * root "__FINAL_PATH__/deploy_process/auto_deploy_fallback.sh" regular_check > /dev/null
+
+# Check the availability of the main server, after a failure
+#*/5 * * * * root "__FINAL_PATH__/deploy_process/auto_deploy_fallback.sh" post_failure_check > /dev/null

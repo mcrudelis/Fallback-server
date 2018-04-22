@@ -178,6 +178,13 @@ simple_checksum "$script_dir/config.conf"
 simple_checksum "$script_dir/app_list"
 
 #=================================================
+# PRINT THE IP OF THIS SERVER
+#=================================================
+
+echo "$(curl -s http://www.monip.org/ | grep "IP : " | cut -d':' -f2 | cut -d' ' -f2| cut -d'<' -f1)" \
+	> "$main_archive_dir/ip_main_server"
+
+#=================================================
 # SEND ARCHIVES ON THE FALLBACK SERVER
 #=================================================
 
