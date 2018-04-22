@@ -111,7 +111,7 @@ An email will be send as soon as the main server will be back online."
 		echo "$mail_notification" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Failure notice !]$ip_main_server unavailable" "$contact_mail"
 
 		#=================================================
-		# FALLBACK AUTO DEPLOYEMENT
+		# FALLBACK AUTO DEPLOYMENT
 		#=================================================
 
 		fallback_success=0
@@ -125,7 +125,7 @@ An email will be send as soon as the main server will be back online."
 			else
 				fallback_result="have failed"
 			fi
-			cat "$script_dir/auto_deploy.log" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Failure notice] Auto deployement of the fallback $fallback_result for $ip_main_server" "$contact_mail"
+			cat "$script_dir/auto_deploy.log" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Failure notice] Auto deployment of the fallback $fallback_result for $ip_main_server" "$contact_mail"
 		fi
 
 		# Get authorisation to modify the DNS
