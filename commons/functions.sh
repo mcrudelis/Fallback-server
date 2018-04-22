@@ -27,7 +27,12 @@ get_infos_from_config () {
 }
 
 main_message () {
-	echo -e "\e[1m$1\e[0m"
+	if [ $auto_mode -eq 0 ]
+	then
+		echo -e "\e[1m$1\e[0m"
+	else
+		echo "$1"
+	fi
 }
 
 main_message_log () {

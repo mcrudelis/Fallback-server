@@ -37,7 +37,7 @@ get_infos_from_config
 #=================================================
 
 # Usually is the home directory of the ssh user, then updated_backup
-local_archive_dir="/home/USER/updated_backup"
+local_archive_dir="/home/fallback/updated_backup"
 sudo mkdir -p "$local_archive_dir"
 temp_backup_dir="$local_archive_dir/temp_fallback_backup"
 

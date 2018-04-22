@@ -6,6 +6,7 @@
 
 auto_mode=0
 if [ "$1" = "auto" ]
+then
 	auto_mode=1
 fi
 
@@ -19,7 +20,8 @@ When you're done and you would cease to use this other server. Use the script
 'close_fallback.sh'.\e[0m
 "
 
-if [ $auto_deploy -eq 0 ]
+if [ $auto_mode -eq 0 ]
+then
 	read -p "Press a key to continue."
 fi
 
@@ -40,7 +42,7 @@ source "$script_dir/../commons/functions.sh"
 #=================================================
 
 # Usually the backup directory is the home directory of the ssh user
-local_archive_dir="/home/USER/backup"
+local_archive_dir="/home/fallback/backup"
 
 decrypted_dir="$local_archive_dir/decrypted"
 pass_file="$decrypted_dir/pass"
@@ -62,7 +64,8 @@ backup_decrypt() {
 		# If there no file for the decryption password.
 		if [ ! -s "$pass_file" ]
 		then
-			if [ $auto_deploy -eq 1 ]
+			if [ $auto_mode -eq 1 ]
+			then
 				echo "!!! Your backup is encrypted, but the password file isn't available ($pass_file).
 !!! The fallback can't be deployed automatically without this password."
 				exit 1
