@@ -150,7 +150,6 @@ Please update your DNS manually or fix the script."
 	fi
 fi
 
-
 #=================================================
 # POST_FAILURE_CHECK
 #=================================================
