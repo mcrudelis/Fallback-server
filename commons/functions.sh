@@ -68,3 +68,7 @@ define_encryption_key () {
 	# And securise the file
 	sudo chmod 400 "$pass_file"
 }
+
+get_debian_release () {
+	echo $(lsb_release --codename --short)
+}

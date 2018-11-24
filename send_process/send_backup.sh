@@ -89,7 +89,13 @@ backup_encrypt() {
 
 backup_name="system$backup_extension"
 backup_hooks="conf_ldap conf_ynh_mysql conf_ssowat conf_ynh_certs data_mail conf_xmpp conf_nginx conf_cron conf_ynh_currenthost"
-backup_command="$ynh_backup --output-directory $temp_backup_dir --ignore-apps --system $backup_hooks --name $backup_name"
+if [ "$(get_debian_release)" = "jessie" ]
+then
+	backup_ignore="--ignore-apps"
+else
+	backup_ignore=""
+fi
+backup_command="$ynh_backup --output-directory $temp_backup_dir $backup_ignore --system $backup_hooks --name $backup_name"
 # If the backup is different than the previous one
 if backup_checksum "$backup_command"
 then
@@ -114,7 +120,13 @@ do
 	then
 		appid="${app//\[.\]\: /}"
 		backup_name="$appid$backup_extension"
-		backup_command="$ynh_backup --output-directory $temp_backup_dir --ignore-system --name $backup_name --apps"
+		if [ "$(get_debian_release)" = "jessie" ]
+		then
+			backup_ignore="--ignore-system"
+		else
+			backup_ignore=""
+		fi
+		backup_command="$ynh_backup --output-directory $temp_backup_dir $backup_ignore --name $backup_name --apps"
 		# If the backup is different than the previous one
 		if backup_checksum "$backup_command $appid"
 		then
