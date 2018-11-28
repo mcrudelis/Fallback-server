@@ -105,7 +105,7 @@ then
 	# Move the backup in the dedicated directory
 	mv "$temp_backup_dir/$backup_name.tar.gz" "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
 	# Then remove the link in yunohost directory.
-	yunohost backup delete "$backup_name" 2>&1 | $logger
+	rm -f "/home/yunohost.backup/archives/$backup_name".{tar.gz,info.json} 2>&1 | $logger
 	# Encrypt the backup
 	backup_encrypt
 fi
@@ -136,7 +136,7 @@ do
 			# Move the backup in the dedicated directory
 			mv "$temp_backup_dir/$backup_name.tar.gz" "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
 			# Then remove the link in yunohost directory.
-			yunohost backup delete "$backup_name" 2>&1 | $logger
+			rm -f "/home/yunohost.backup/archives/$backup_name".{tar.gz,info.json} 2>&1 | $logger
 			# Encrypt the backup
 			backup_encrypt
 		fi
