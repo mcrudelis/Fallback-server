@@ -1,6 +1,16 @@
 #!/bin/bash
 
 #=================================================
+# DETECT AUTO-MODE
+#=================================================
+
+auto_mode=0
+if [ "$1" = "auto" ]
+then
+	auto_mode=1
+fi
+
+#=================================================
 # DISCLAIMER
 #=================================================
 
@@ -11,7 +21,10 @@ Then, each backup from your fallback server will be restored to update the data
 of your server.\e[0m
 "
 
-read -p "Press a key to continue."
+if [ $auto_mode -eq 0 ]
+then
+	read -p "Press a key to continue."
+fi
 
 #=================================================
 # GET THE SCRIPT'S DIRECTORY

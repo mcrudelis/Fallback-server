@@ -1,6 +1,16 @@
 #!/bin/bash
 
 #=================================================
+# DETECT AUTO-MODE
+#=================================================
+
+auto_mode=0
+if [ "$1" = "auto" ]
+then
+	auto_mode=1
+fi
+
+#=================================================
 # DISCLAIMER
 #=================================================
 
@@ -11,7 +21,10 @@ To update your main server with this data, use the script
 'update_from_fallback.sh' and your main server.\e[0m
 "
 
-read -p "Press a key to continue."
+if [ $auto_mode -eq 0 ]
+then
+	read -p "Press a key to continue."
+fi
 
 #=================================================
 # GET THE SCRIPT'S DIRECTORY
