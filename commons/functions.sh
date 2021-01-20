@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ynh_backup="sudo yunohost backup create"
+ynh_compress_backup="tar --create --acls --preserve-permissions --xattrs --absolute-names --gzip"
 ynh_restore="sudo yunohost backup restore --force"
 ynh_backup_delete="sudo yunohost backup delete"
 

@@ -91,8 +91,8 @@ backup_command="$ynh_backup $backup_ignore --system $backup_hooks --name $backup
 main_message ">>> Make a backup for $backup_name"
 # Make a backup
 $backup_command
-# Copy the backup in the dedicated directory
-sudo cp "/home/yunohost.backup/archives/$backup_name.tar.gz" "$local_archive_dir/$backup_name.tar.gz"
+# Compress the backup
+ynh_compress_backup --file "$local_archive_dir/$backup_name.tar.gz" /home/yunohost.backup/archives/$backup_name.{tar,info.json}
 # Then remove the backup in yunohost directory.
 sudo yunohost backup delete "$backup_name"
 # Encrypt the backup
@@ -116,8 +116,8 @@ do
 	main_message ">>> Make a backup for $backup_name"
 	# Make a backup
 	$backup_command $appid
-	# Move the backup in the dedicated directory
-	sudo cp "/home/yunohost.backup/archives/$backup_name.tar.gz" "$local_archive_dir/$backup_name.tar.gz"
+	# Compress the backup
+	ynh_compress_backup --file "$local_archive_dir/$backup_name.tar.gz" /home/yunohost.backup/archives/$backup_name.{tar,info.json}
 	# Then remove the backup in yunohost directory.
 	sudo yunohost backup delete "$backup_name"
 	# Encrypt the backup

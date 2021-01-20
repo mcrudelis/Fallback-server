@@ -49,7 +49,7 @@ backup_checksum () {
 	# Make a temporary backup
 	main_message_log "> Make a temporary backup for $backup_name"
 	rm -rf "$temp_backup_dir" 2>&1 | $logger
-	if ! $backup_cmd --no-compress > /dev/null
+	if ! $backup_cmd --methods copy > /dev/null
 	then
 		# If the backup fail, do not make a real backup
 		echo ">>> The temporary backup failed..."
@@ -102,8 +102,8 @@ then
 	main_message_log ">>> Make a real backup for $backup_name"
 	# Make a real backup
 	$backup_command 2>&1 | $logger
-	# Move the backup in the dedicated directory
-	mv "$temp_backup_dir/$backup_name.tar.gz" "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
+	# Compress the backup
+	ynh_compress_backup --file "$main_archive_dir/$backup_name.tar.gz" "$temp_backup_dir/$backup_name".{tar,info.json} 2>&1 | $logger
 	# Then remove the link in yunohost directory.
 	rm -f "/home/yunohost.backup/archives/$backup_name".{tar.gz,info.json} 2>&1 | $logger
 	# Encrypt the backup
@@ -133,8 +133,8 @@ do
 			main_message_log ">>> Make a real backup for $backup_name"
 			# Make a real backup
 			$backup_command $appid 2>&1 | $logger
-			# Move the backup in the dedicated directory
-			mv "$temp_backup_dir/$backup_name.tar.gz" "$main_archive_dir/$backup_name.tar.gz" 2>&1 | $logger
+			# Compress the backup
+			ynh_compress_backup --file "$main_archive_dir/$backup_name.tar.gz" "$temp_backup_dir/$backup_name".{tar,info.json} 2>&1 | $logger
 			# Then remove the link in yunohost directory.
 			rm -f "/home/yunohost.backup/archives/$backup_name".{tar.gz,info.json} 2>&1 | $logger
 			# Encrypt the backup
