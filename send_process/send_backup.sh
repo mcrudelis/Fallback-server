@@ -62,6 +62,7 @@ backup_checksum () {
 	local new_checksum=$(find "$temp_backup_dir" -type f -exec md5sum {} \; | md5sum | cut -d' ' -f1)
 	# Get the previous checksum
 	local old_checksum=$(cat "$checksum_dir/$backup_name" 2> /dev/null)
+	rm -rf "$temp_backup_dir" 2>&1 | $logger
 	# And compare the 2 checksum
 	if [ "$new_checksum" == "$old_checksum" ]
 	then
@@ -88,7 +89,7 @@ backup_encrypt() {
 #=================================================
 
 backup_name="system$backup_extension"
-backup_hooks="conf_ldap conf_ynh_mysql conf_ssowat conf_ynh_certs data_mail conf_xmpp conf_nginx conf_cron conf_ynh_currenthost"
+backup_hooks="conf_ldap conf_ssowat conf_ynh_certs data_mail conf_xmpp conf_nginx conf_cron conf_ynh_currenthost"
 if [ "$(get_debian_release)" = "jessie" ]
 then
 	backup_ignore="--ignore-apps"
@@ -103,9 +104,9 @@ then
 	# Make a real backup
 	$backup_command 2>&1 | $logger
 	# Compress the backup
-	ynh_compress_backup --file "$main_archive_dir/$backup_name.tar.gz" "$temp_backup_dir/$backup_name".{tar,info.json} 2>&1 | $logger
+	$ynh_compress_backup --file "$main_archive_dir/$backup_name.tar.gz" "$temp_backup_dir/$backup_name".tar 2>&1 | $logger
 	# Then remove the link in yunohost directory.
-	rm -f "/home/yunohost.backup/archives/$backup_name".{tar.gz,info.json} 2>&1 | $logger
+	rm -f "/home/yunohost.backup/archives/$backup_name".{tar,info.json} 2>&1 | $logger
 	# Encrypt the backup
 	backup_encrypt
 fi
@@ -134,9 +135,9 @@ do
 			# Make a real backup
 			$backup_command $appid 2>&1 | $logger
 			# Compress the backup
-			ynh_compress_backup --file "$main_archive_dir/$backup_name.tar.gz" "$temp_backup_dir/$backup_name".{tar,info.json} 2>&1 | $logger
+			$ynh_compress_backup --file "$main_archive_dir/$backup_name.tar.gz" "$temp_backup_dir/$backup_name".tar 2>&1 | $logger
 			# Then remove the link in yunohost directory.
-			rm -f "/home/yunohost.backup/archives/$backup_name".{tar.gz,info.json} 2>&1 | $logger
+			rm -f "/home/yunohost.backup/archives/$backup_name".{tar,info.json} 2>&1 | $logger
 			# Encrypt the backup
 			backup_encrypt
 		fi
