@@ -107,8 +107,8 @@ sudo cp "$decrypted_dir/app_list" "$script_dir/app_list"
 
 main_message "> Create a global backup before deploying the fallback"
 $ynh_backup_delete backup_before_deploy_fallback 2> /dev/null
-backup_hooks="conf_ldap conf_ynh_mysql conf_ssowat conf_ynh_certs data_mail conf_xmpp conf_nginx conf_cron conf_ynh_currenthost"
-$ynh_backup --system $backup_hooks --name backup_before_deploy_fallback
+backup_hooks=($(get_backup_hooks))
+$ynh_backup --system ${backup_hooks[@]} --name backup_before_deploy_fallback
 
 #=================================================
 # RESTORE THE SYSTEM FROM THE MAIN SERVER BACKUP

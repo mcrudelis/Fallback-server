@@ -73,3 +73,9 @@ define_encryption_key () {
 get_debian_release () {
 	echo $(lsb_release --codename --short)
 }
+
+get_backup_hooks () {
+    # Make a list of all backup hooks and exclude the home hook which may make huge backup.
+    # We need here a dynamic list since those hooks are changing names at each upgrade !!!
+    ls /usr/share/yunohost/hooks/backup/ | grep --extended-regexp --invert-match "home|multimedia" | cut --delimiter=- --fields=2
+}

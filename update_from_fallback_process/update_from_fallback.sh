@@ -130,14 +130,14 @@ then
 	main_message "> Create a backup of the system before restoring"
 	backup_name="system_pre_flbck_restore"
 	$ynh_backup_delete $backup_name 2> /dev/null
-	backup_hooks="conf_ldap conf_ynh_mysql conf_ssowat conf_ynh_certs data_mail conf_xmpp conf_nginx conf_cron conf_ynh_currenthost"
+	backup_hooks=($(get_backup_hooks))
 	if [ "$(get_debian_release)" = "jessie" ]
 	then
 		backup_ignore="--ignore-apps"
 	else
 		backup_ignore=""
 	fi
-	$ynh_backup $backup_ignore --system $backup_hooks --name $backup_name
+	$ynh_backup $backup_ignore --system ${backup_hooks[@]} --name $backup_name
 
 	#=================================================
 	# RESTORE THE SYSTEM FROM THE MAIN SERVER BACKUP
