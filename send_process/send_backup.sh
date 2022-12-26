@@ -105,8 +105,10 @@ then
 	$backup_command 2>&1 | $logger
 	# Compress the backup
 	$ynh_compress_backup --file "$main_archive_dir/$backup_name.tar.gz" "$temp_backup_dir/$backup_name".tar 2>&1 | $logger
+	# Keep the info.json file
+	mv "/home/yunohost.backup/archives/$backup_name.info.json" "$main_archive_dir" 2>&1 | $logger
 	# Then remove the link in yunohost directory.
-	rm -f "/home/yunohost.backup/archives/$backup_name".{tar,info.json} 2>&1 | $logger
+	rm -f "/home/yunohost.backup/archives/$backup_name.tar" 2>&1 | $logger
 	# Encrypt the backup
 	backup_encrypt
 fi
@@ -136,8 +138,10 @@ do
 			$backup_command $appid 2>&1 | $logger
 			# Compress the backup
 			$ynh_compress_backup --file "$main_archive_dir/$backup_name.tar.gz" "$temp_backup_dir/$backup_name".tar 2>&1 | $logger
+			# Keep the info.json file
+			mv "/home/yunohost.backup/archives/$backup_name.info.json" "$main_archive_dir" 2>&1 | $logger
 			# Then remove the link in yunohost directory.
-			rm -f "/home/yunohost.backup/archives/$backup_name".{tar,info.json} 2>&1 | $logger
+			rm -f "/home/yunohost.backup/archives/$backup_name.tar" 2>&1 | $logger
 			# Encrypt the backup
 			backup_encrypt
 		fi

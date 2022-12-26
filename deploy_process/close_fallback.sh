@@ -1,6 +1,12 @@
 #!/bin/bash
 
 #=================================================
+# GET THE SCRIPT'S DIRECTORY
+#=================================================
+
+script_dir="$(dirname $(realpath $0))"
+
+#=================================================
 # DETECT AUTO-MODE
 #=================================================
 
@@ -11,32 +17,26 @@ then
 fi
 
 #=================================================
+# IMPORT FUNCTIONS
+#=================================================
+
+source "$script_dir/../commons/functions.sh"
+
+#=================================================
 # DISCLAIMER
 #=================================================
 
 echo -e "\e[1mUse this script when you've finished to use this fallback server.
-The system and the apps will be backuped and the server will be restore in the
+The system and the apps will be backed up and the server will be restored in the
 state it was before you use 'deploy_fallback.sh'.
 To update your main server with this data, use the script
-'update_from_fallback.sh' and your main server.\e[0m
+'update_from_fallback.sh' on your main server.\e[0m
 "
 
 if [ $auto_mode -eq 0 ]
 then
 	read -p "Press a key to continue."
 fi
-
-#=================================================
-# GET THE SCRIPT'S DIRECTORY
-#=================================================
-
-script_dir="$(dirname $(realpath $0))"
-
-#=================================================
-# IMPORT FUNCTIONS
-#=================================================
-
-source "$script_dir/../commons/functions.sh"
 
 #=================================================
 # READ CONFIGURATION FROM CONFIG.CONF
@@ -92,7 +92,7 @@ main_message ">>> Make a backup for $backup_name"
 # Make a backup
 $backup_command
 # Compress the backup
-ynh_compress_backup --file "$local_archive_dir/$backup_name.tar.gz" /home/yunohost.backup/archives/$backup_name.{tar,info.json}
+$ynh_compress_backup --file "$local_archive_dir/$backup_name.tar.gz" /home/yunohost.backup/archives/$backup_name.{tar,info.json}
 # Then remove the backup in yunohost directory.
 sudo yunohost backup delete "$backup_name"
 # Encrypt the backup
@@ -117,7 +117,7 @@ do
 	# Make a backup
 	$backup_command $appid
 	# Compress the backup
-	ynh_compress_backup --file "$local_archive_dir/$backup_name.tar.gz" /home/yunohost.backup/archives/$backup_name.{tar,info.json}
+	$ynh_compress_backup --file "$local_archive_dir/$backup_name.tar.gz" /home/yunohost.backup/archives/$backup_name.{tar,info.json}
 	# Then remove the backup in yunohost directory.
 	sudo yunohost backup delete "$backup_name"
 	# Encrypt the backup
@@ -149,7 +149,9 @@ sudo rm "$pass_file"
 main_message "> Clean the system"
 
 sudo rm -r /etc/nginx/conf.d/*
+sudo yunohost tools regen-conf nginx --force
 sudo rm -r /etc/metronome/conf.d/*
+sudo yunohost tools regen-conf metronome --force
 sudo rm -r /var/mail/*
 
 #=================================================
@@ -163,5 +165,5 @@ sudo yunohost backup restore --force backup_before_deploy_fallback
 # DISCLAIMER
 #=================================================
 
-echo -e	 "\n\e[1mNow that you're finished to use this fallback server, you should check
+echo -e	 "\n\e[1mNow that you're done with this fallback server, you should check
 your dns and be sure it points on your main server.\e[0m"

@@ -16,7 +16,7 @@ fi
 
 echo -e "\e[1mBe carreful with this script !
 It will change your system by restoring the backup from your fallback server.
-Before any restoring, a backup will be make for each part of your server.
+Before any restoring, a backup will be made for each part of your server.
 Then, each backup from your fallback server will be restored to update the data
 of your server.\e[0m
 "
@@ -166,7 +166,7 @@ do
 		then
 			main_message "> Restore the app $appid"
 			# If an app exist with the same id
-			if sudo yunohost app list --installed --filter $appid | grep -q id:
+			if sudo yunohost app list | grep -q "id: $appid"
 			then
 				$ynh_backup_delete ${appid}_pre_flbck_restore 2> /dev/null
 				# Make a backup before
